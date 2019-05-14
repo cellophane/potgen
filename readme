@@ -1,0 +1,9 @@
+PotGen
+
+Generate a 3D-printable pot with triangular faces from user input:
+-bspline curve profile
+-segment resolution in z, theta
+-overall height
+-jitter on vertices
+-thickness
+
