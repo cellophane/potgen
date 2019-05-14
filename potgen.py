@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.spatial.transform import Rotation as R
+from scipy.interpolate import UnivariateSpline
 #main class to generate the pot mesh
 class PotGen:
     def __init__(self, curve, resolution = [16,16], height = 10):
@@ -18,8 +20,13 @@ class PotGen:
         return self.vertices
     #generate the rest of the vertices in the mesh
     def spinVertices(self):
-        pass
-    
+        r = R.from_quat(([0,0,np.sin(2*np.pi/self.thetaRes),np.cos(2*np.pi/self.thetaRes)]))
+        v1 = self.vertices
+        for i in range(self.thetaRes):
+            v1 = r.apply(v1)
+            self.vertices = np.append(self.vertices,v1,0)
+        return self.vertices
+            
     #generate the triangles in the shell
     def makeTriangles(self):
         pass
