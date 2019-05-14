@@ -10,7 +10,8 @@ class PotGen:
         self.zRes = resolution[0]
         self.thetaRes = resolution[1]
         self.height = height
-        
+        self.triangles = []
+        self.vertices = np.array([0,0,0])
     #save the output mesh
     def save(self,filename = 'pot.obj'):
         pass
@@ -29,7 +30,23 @@ class PotGen:
             
     #generate the triangles in the shell
     def makeTriangles(self):
-        pass
+        triangles = []
+        vTotal = np.shape(self.vertices)[0]
+        for i in range(vTotal):
+            #the top rim should not have triangles added
+            if (i+1)%self.zRes != 0:
+                #add the two triangles to the upper right of the vertex
+                triangles.append([i,(i+1)%vTotal,(i+self.zRes+1)%vTotal])
+                triangles.append([i,(i+self.zRes+1)%vTotal,(self.zRes+i)%vTotal])
+        self.makeBottom()
+        self.triangles = triangles
+    #generate the bottom of the pot
+    def makeBottom(self):
+        self.vertices = np.append(self.vertices,[0,0,0],0)
+        triangles = []
+        for i in range(self.thetaRes):
+            triangles.append([i*self.zRes,(i+1)*self.zRes,np.size(self.vertices)[0]-1])
+        self.triangles+=triangles
     #generate the initial mesh from the vertices and triangle data  
     def makeShell(self):
         pass
