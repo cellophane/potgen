@@ -80,13 +80,13 @@ class PotGen:
             a = self.zRes-1+i*self.zRes
             b = (self.zRes-1+(i+1)*self.zRes)%size
             c = (size+1)+(self.zRes-1 + (i+1)*self.zRes)%size
-            self.shellMesh.faces = np.append(self.shellMesh.faces,[[a,b,c]],0)
+            self.shellMesh.faces = np.append(self.shellMesh.faces,[[a,c,b]],0)
             
             
             a = self.zRes-1+i*self.zRes
             b = (size+1)+self.zRes-1 + i*self.zRes
             c = (size+1)+(self.zRes-1 + (i+1)*self.zRes)%size
-            self.shellMesh.faces = np.append(self.shellMesh.faces,[[a,c,b]],0)
+            self.shellMesh.faces = np.append(self.shellMesh.faces,[[a,b,c]],0)
            
             self.potMesh = self.shellMesh
     #display an image of the mesh
