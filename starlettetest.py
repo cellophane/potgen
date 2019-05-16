@@ -13,6 +13,7 @@ def form(request):
     return HTMLResponse("""
         <h3>Generate your own 3D-printable pot!<h3>
         <form action="generate" enctype="multipart/form-data">
+            parameters for the profile: x values must be increasing.
             x values:
             <input type="text" name="x" value="[0,5,7,8,12]">
             y values:
@@ -33,16 +34,13 @@ def generate(request):
     y = ast.literal_eval(yString)
     res = ast.literal_eval(resString)
     curve = UnivariateSpline(x, y)
-    
+    if res[0]*res[1]>10**5:
+        return HTMLResponse("this would be too big.")
     pot = PotGen(curve,res)
     pot.generate()
     pot.save()
     
     return FileResponse('pot.stl',filename = 'pot.stl')
-@app.route("/getfile/{filename}")
-def file(request):
-    filename = request.path_params['filename']
-    print(filename)
-    return FileResponse('hello.stl',filename = 'hello.stl')
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=5225)
+    uvicorn.run(app, host="0.0.0.0", port=5225)
