@@ -15,15 +15,14 @@ class PotGen:
         self.height = height
         self.triangles = []
         self.vertices = np.array([0,0,0])
-    #save the output mesh
+
     def generate(self):
         self.makeVertices()
         self.spinVertices()
         self.makeTriangles()
         self.makeShell()
-        self.displayMesh()
         self.solidifyMesh(.2)
-        
+    #save the output mesh
     def save(self,filename = 'pot'):
         self.potMesh.export(filename+'.stl','stl')
     #take the profile curve and evaluate it to generate the initial vertices
@@ -67,27 +66,29 @@ class PotGen:
         
         self.newVertices =np.copy(self.vertices)
         normals = self.potMesh.vertex_normals
-        shellMesh = self.potMesh.copy()
+        self.shellMesh = self.potMesh.copy()
         for i,n in enumerate(normals):
-            shellMesh.vertices[i]+=n*thickness
+            self.shellMesh.vertices[i]+=n*thickness
+        #flip the normals of the other side of the pot
+        self.shellMesh.invert()
+        #concatenate the two halve of the mesh
+        self.shellMesh= self.shellMesh+self.potMesh
         
-        shellMesh.invert()
-        #trimesh does not preserve vertex ordering
-        #so we have to find the top of the mesh again
-        shellTopRing = {}
-        for i,v in enumerate(shellMesh.vertices):
-            if abs(v[2]-self.height)<self.height/self.zRes:
-                shellTopRing[v] = i
-        coreTopRing = {}
-
-        for i,v in enumerate(self.potMesh.vertices):
-            if abs(v[2]-self.height)<self.height/self.zRes/2:
-                coreTopRing[v] = i
-
-        print(len(shellTopRing))
-        coreTopRing = set()
-        self.shellMesh= shellMesh+self.potMesh
-        self.shellMesh.export("test combined.stl",'stl')
+        #stitch the two halves together
+        for i in range(self.thetaRes):
+            size = self.thetaRes*self.zRes
+            a = self.zRes-1+i*self.zRes
+            b = (self.zRes-1+(i+1)*self.zRes)%size
+            c = (size+1)+(self.zRes-1 + (i+1)*self.zRes)%size
+            self.shellMesh.faces = np.append(self.shellMesh.faces,[[a,b,c]],0)
+            
+            
+            a = self.zRes-1+i*self.zRes
+            b = (size+1)+self.zRes-1 + i*self.zRes
+            c = (size+1)+(self.zRes-1 + (i+1)*self.zRes)%size
+            self.shellMesh.faces = np.append(self.shellMesh.faces,[[a,c,b]],0)
+           
+            self.potMesh = self.shellMesh
     #display an image of the mesh
     
     def displayMesh(self):
