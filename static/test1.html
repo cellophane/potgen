@@ -3,7 +3,8 @@
 <html>
 
 <head>
-    <title>Example 08.09 - Load stl model </title>
+    <title>Generate your own 3D-printable pot! </title>
+	<script type="text/javascript" src="js/download.js"></script>
     <script type="text/javascript" src="js/three.min.js"></script>
     <script type="text/javascript" src="js/STLLoader.js"></script>
 
@@ -37,7 +38,7 @@
         var camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
         // create a render and set the size
         var webGLRenderer = new THREE.WebGLRenderer();
-        webGLRenderer.setClearColor(new THREE.Color(0x000, 1.0));
+        webGLRenderer.setClearColor(new THREE.Color( 0x7891ba ));
         webGLRenderer.setSize(window.innerWidth, window.innerHeight);
         webGLRenderer.shadowMapEnabled = true;
         // position and point the camera to the center of the scene
@@ -60,10 +61,15 @@
         };
         var group;
         var gui = new dat.GUI();
+		
+		var giveFile = {
+		getSTL : function(){download('pot.stl')}
+		}
+		
 		var generate =  {
 		zRes : 16,
 		thetaRes : 32,
-		
+		//function to control the pot mesh
 		create: function(){ 
 			
 			while(scene.children.length > 0){ 
@@ -73,7 +79,7 @@
         loader.load("../testgen/"+this.zRes.toString()+"/"+this.thetaRes.toString(), function (geometry) {
             console.log(geometry);
 			
-            var mat = new THREE.MeshLambertMaterial({color: 0x7777ff});
+            var mat = new THREE.MeshLambertMaterial({color: 0xaa6f08});
             group = new THREE.Mesh(geometry, mat);
             group.rotation.x = -0.5 * Math.PI;
             group.scale.set(0.6, 0.6, 0.6);
@@ -84,16 +90,17 @@
 		scene.add(spotLight);
 		}
 		}
+		//add controls for the pot
 		gui.add(generate,'zRes',3,128).step(1);
 		gui.add(generate,'thetaRes',3,128).step(1);
-		
 		gui.add(generate,'create');
+		gui.add(giveFile,'getSTL');
 		
         var loader = new THREE.STLLoader();
         var group = new THREE.Object3D();
         loader.load("pot.stl", function (geometry) {
             console.log(geometry);
-            var mat = new THREE.MeshLambertMaterial({color: 0x7777ff});
+            var mat = new THREE.MeshLambertMaterial({color: 0xaa6f08});
             group = new THREE.Mesh(geometry, mat);
             group.rotation.x = -0.5 * Math.PI;
             group.scale.set(0.6, 0.6, 0.6);
