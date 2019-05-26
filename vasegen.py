@@ -416,7 +416,7 @@ def createMesh(size, n, omino_set):
     vertices = []
     triangles = []
     baseTriangles = [(i,(i+1)%4,(i+1)%4+4) for i in range(4)]+[(i,(i+1)%4+4,i+4) for i in range(4)]+[(5,6,7),(5,7,4)]
-    for i in range(len(omino_set)):
+    for i in range(len(omino_set)*5):
         for triangle in baseTriangles:
             triangles.append((triangle[0]+8*i,triangle[1]+8*i,triangle[2]+8*i))
     sideLength = 7
@@ -426,12 +426,14 @@ def createMesh(size, n, omino_set):
         omino = list(ominos)[ominoIndex]
         for tile in omino:
             bevelSides = []
+            
             for x in [-1,0,1]:
                 for y in [y for y in [-1,0,1] if abs(x)+abs(y)==1]:
                     if not (tile[0]+x,tile[1]+y) in omino:
                         bevelSides.append((x,y))
+                        
             for x,y in [(0,0),(0,1),(1,1),(1,0)]:
-                vertices.append((x+coord[0],y+coord[1],0))
+                vertices.append((x+coord[0]+tile[0],y+coord[1]+tile[1],0))
             for x,y in [(0,0),(0,1),(1,1),(1,0)]:
                 xOffset = 0
                 yOffset = 0
@@ -445,7 +447,11 @@ def createMesh(size, n, omino_set):
                         yOffset = bevelWidth
                 elif (0,1) in bevelSides:
                     yOffset = -bevelWidth
-                vertices.append((x+xOffset+coord[0],y+yOffset+coord[1],bevelHeight))
+                if xOffset == 0 and yOffset == 0:
+                    if not (tile[0]+[-1,1][x],tile[1]+[-1,1][y]) in omino:
+                        xOffset = [1,-1][x]*bevelWidth
+                        yOffset = [1,-1][y]*bevelWidth
+                vertices.append((x+xOffset+coord[0]+tile[0],y+yOffset+coord[1]+tile[1],bevelHeight))
     for i,vertex in enumerate(vertices):
         vertices[i]=[vertex[0]*sideLength,vertex[1]*sideLength,vertex[2]]
     mesh = trimesh.Trimesh(vertices=vertices,faces=triangles)
@@ -456,7 +462,7 @@ def createMesh(size, n, omino_set):
 size = [15,7]
 n = 5
 quantity = 10
-omino_sets = tileTube(size,n,quantity)
+omino_sets = tileRectangle(size,n,quantity)
 set_list = list(omino_sets)
 for i in range(0,len(set_list),max(int(len(set_list)/20),1)):
    plotOminoSet(set_list[i],size,n)
