@@ -156,7 +156,6 @@ def tileTube(size=[4,4],n=2,quantity=0, ominos = set(), grid = [], omino_list = 
                             grid[(tile[0]+neighbor[0])%size[0]][tile[1]+neighbor[1]]=0
                 return
         if len(empty_neighbors)==0:
-            plotOminoSet(frozenset(omino_list),size,n)
             omino_sets.add(frozenset(omino_list))
 
 def tileRectangle(size=[4,4],n=2,quantity=0, ominos = set(), grid = [], omino_list = [], omino_sets = set(), tried_set = set(), depth = 0):
@@ -300,6 +299,9 @@ def countContiguous(grid,n):
     return True
         
 def countContiguousTube(grid,n):
+    global placeCount
+    if placeCount == 10000:
+        print(grid)
     patchMembers = set()
     patchSizes = []
     
@@ -319,7 +321,7 @@ def countContiguousTube(grid,n):
                         if yNeighbor<0 or yNeighbor>=size[1]:
                             continue
                         if grid[xNeighbor%size[0]][yNeighbor] == 0:
-                            neighborList.append((xNeighbor,yNeighbor))
+                            neighborList.append((xNeighbor%size[0],yNeighbor))
                 toCheck = neighborList.copy()
                 neighborList.append((x,y))
                 while len(toCheck)>0:
@@ -338,9 +340,13 @@ def countContiguousTube(grid,n):
                                     toCheck.append((xNeighbor%size[0],yNeighbor))
                                     
                 patchSizes.append(patchSize)
+    if placeCount%5000 == 0:
+        print(patchSizes)
+        print(placeCount)
     for patchSize in patchSizes:
         if patchSize%n != 0:
             return False
+    
     return True                    
                     
             
@@ -401,13 +407,57 @@ def plotOminoSet(omino_set,size,n):
     plt.xlim(xMin,xMax)
 
     ax.add_collection(p)
-    
     plt.show()
-size = [5,5]
+#Function to turn an n-omino tiling on a tube into a beveled mesh. 
+#We will consider our coordinates to be the bottom left side of the square tiles.
+#The bevel should exist on sides without a neighboring tile in the pentomino.
+def createMesh(size, n, omino_set):
+    ominos = generateOminos(n)
+    vertices = []
+    triangles = []
+    baseTriangles = [(i,(i+1)%4,(i+1)%4+4) for i in range(4)]+[(i,(i+1)%4+4,i+4) for i in range(4)]+[(5,6,7),(5,7,4)]
+    for i in range(len(omino_set)):
+        for triangle in baseTriangles:
+            triangles.append((triangle[0]+8*i,triangle[1]+8*i,triangle[2]+8*i))
+    sideLength = 7
+    bevelWidth = .2
+    bevelHeight = .2
+    for ominoIndex, coord in omino_set:
+        omino = list(ominos)[ominoIndex]
+        for tile in omino:
+            bevelSides = []
+            for x in [-1,0,1]:
+                for y in [y for y in [-1,0,1] if abs(x)+abs(y)==1]:
+                    if not (tile[0]+x,tile[1]+y) in omino:
+                        bevelSides.append((x,y))
+            for x,y in [(0,0),(0,1),(1,1),(1,0)]:
+                vertices.append((x+coord[0],y+coord[1],0))
+            for x,y in [(0,0),(0,1),(1,1),(1,0)]:
+                xOffset = 0
+                yOffset = 0
+                if x == 0:
+                    if (-1,0) in bevelSides:
+                        xOffset = bevelWidth
+                elif (1,0) in bevelSides:
+                    xOffset = -bevelWidth
+                if y == 0:
+                    if (0,-1) in bevelSides:
+                        yOffset = bevelWidth
+                elif (0,1) in bevelSides:
+                    yOffset = -bevelWidth
+                vertices.append((x+xOffset+coord[0],y+yOffset+coord[1],bevelHeight))
+    for i,vertex in enumerate(vertices):
+        vertices[i]=[vertex[0]*sideLength,vertex[1]*sideLength,vertex[2]]
+    mesh = trimesh.Trimesh(vertices=vertices,faces=triangles)
+    mesh.export("test.stl")
+            
+            
+        
+size = [15,7]
 n = 5
-quantity = 10000
+quantity = 10
 omino_sets = tileTube(size,n,quantity)
 set_list = list(omino_sets)
-for i in range(0,len(set_list),max(int(len(set_list)/10),1)):
+for i in range(0,len(set_list),max(int(len(set_list)/20),1)):
    plotOminoSet(set_list[i],size,n)
 #printOminoSets(omino_sets,size,n)
