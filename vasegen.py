@@ -507,12 +507,11 @@ def createMesh(size, n, omino_set):
         vertices[i]=[vertex[0]*sideLength,vertex[1]*sideLength,vertex[2]]
     mesh = trimesh.Trimesh(vertices=vertices,faces=triangles)
     mesh.export("test.stl")
-
+#function to create a list of clockwise edges for an n-omino
 def generateEdge(omino, coord = [0,0]):
     edges = set([])
     #start with a vertical edge
     for tile in omino:
-        print(tile)
         #look left
         if not (tile[0]-1,tile[1]) in omino:
             edges.add((tile,(tile[0],tile[1]+1)))
@@ -531,6 +530,10 @@ def generateEdge(omino, coord = [0,0]):
     foundEnds = [edgeStarts[0],edgeEnds[0]]
     foundStarts = []
     currentEdge = list(edges)[0]
+    #keep looking for edges that start with the end of the current edge.
+    #if the new edge is in the same direction as the current edge, replace the
+    #current edge to reflect that. otherwise append the finished edge to the list
+    #and continue looking
     while len(foundEnds)>0:
         end = foundEnds.pop()
         for i, start in enumerate(edgeStarts):
@@ -551,6 +554,7 @@ def generateEdge(omino, coord = [0,0]):
                     foundEnds.append(checkEdge[1])
                     foundStarts.append(edgeStarts[i])
                     break
+    #connect the final edge
     currentEdge = (collapsedEdges[-1][1],collapsedEdges[0][0])
     checkEdge = collapsedEdges[0]
     cXDiff = abs(currentEdge[0][0]-currentEdge[1][0])>0
@@ -563,29 +567,55 @@ def generateEdge(omino, coord = [0,0]):
         collapsedEdges.append(currentEdge)
     return collapsedEdges
     
-        
-            
-                        
+#a function to return a triangulated polygon
+def triangulate(edges):
+    def area(a,b,c):
+        return abs((a[0]*(b[1]-c[1])+b[0]*(c[1]-a[1])+c[0]*(a[1]-b[1]))/2)
+    def inside(triangle,point):
+        a1 = area(triangle[0],triangle[1],point)
+        a2 = area(triangle[1],triangle[2],point)
+        a3 = area(triangle[2],triangle[0],point)
+        a = area(triangle[0],triangle[1],triangle[2])
+        if a1+a2+a3==a:
+            return True
+        return False
+    vertices = []
+    for edge in edges:
+        vertices.append(edge[0])
+    vertices.pop()
+    print(vertices)
+    triangles = []
+    while len(vertices)>3:
+        for i in range(len(vertices)):
+            v1 = vertices[i]
+            v2 = vertices[(i+1)%len(vertices)]
+            v3 = vertices[(i+2)%len(vertices)]
+            noneInside = True
+            for check in [v for v in vertices if v!=v1 and v!=v2 and v!=v3]:
+                if inside([v1,v2,v3],check):
+                    print(f"[{v1},{v2},{v3}],{check}")
+                    noneInside = False
+                    break
+            if noneInside:
+                print(triangles)
+                triangles.append([v1,v2,v3])
+                print(triangles)
+                vertices.pop(i)
+                break
+    triangles.append([vertices])
+    print(triangles)
+    return triangles
+                
+                    
     
             
 size = [15,7]
 n = 5
 quantity = 10
 ominos = generateOminos(5)
-for ii in range(10):
-    edges  = generateEdge(list(ominos)[ii])
-    
-    
-    import numpy as np
-    import pylab as pl
-    from matplotlib import collections  as mc
-    
-    lines = list(edges)
-    
-    lc = mc.LineCollection(lines, linewidths=2)
-    fig, ax = pl.subplots()
-    ax.add_collection(lc)
-    ax.set_aspect('equal')
-    ax.margins(0.1)
-    fig.show()
-    printOmino(list(ominos)[ii])
+edges  = generateEdge(list(ominos)[1])
+lines = list(edges)
+triangles = triangulate(lines)
+
+
+
