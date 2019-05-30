@@ -569,41 +569,56 @@ def generateEdge(omino, coord = [0,0]):
     
 #a function to return a triangulated polygon
 def triangulate(edges):
-    def area(a,b,c):
-        return abs((a[0]*(b[1]-c[1])+b[0]*(c[1]-a[1])+c[0]*(a[1]-b[1]))/2)
+    def cross(v1,v2):
+        return v1[0]*v2[1]-v1[1]*v2[0]
     def inside(triangle,point):
-        a1 = area(triangle[0],triangle[1],point)
-        a2 = area(triangle[1],triangle[2],point)
-        a3 = area(triangle[2],triangle[0],point)
-        a = area(triangle[0],triangle[1],triangle[2])
-        if a1+a2+a3==a:
+        a = triangle[0]
+        b = [triangle[1][0]-a[0],triangle[1][1]-a[1]]
+        c = [triangle[2][0]-a[0],triangle[2][1]-a[1]]
+        point = [point[0]-a[0],point[1]-a[1]]
+        x = point[0]
+        y = point[1]
+        a = [0,0]
+        d = b[0]*c[1]-c[0]*b[1]
+        if d==0:
+            return True
+        wa = (x*(b[1]-c[1])+y*(c[0]-b[0])+b[0]*c[1]-c[0]*b[1])/d
+        wb = (x*c[1]-y*c[0])/d
+        wc = (y*b[0]-x*b[1])/d
+        if wa>=0 and wa<=1 and wb>=0 and wb<=1 and wc>=0 and wc<=1:
+            
             return True
         return False
     vertices = []
     for edge in edges:
         vertices.append(edge[0])
-    vertices.pop()
-    print(vertices)
+    if vertices[0]==vertices[-1]:
+        vertices.pop()
     triangles = []
+    unchanged = False
     while len(vertices)>3:
+        unchanged =True
         for i in range(len(vertices)):
-            v1 = vertices[i]
-            v2 = vertices[(i+1)%len(vertices)]
-            v3 = vertices[(i+2)%len(vertices)]
+            v1 = vertices[(i-1)%len(vertices)]
+            v2 = vertices[i]
+            v3 = vertices[(i+1)%len(vertices)]
             noneInside = True
+            if cross([v2[i]-v1[i] for i in range(2)],[v3[i]-v2[i] for i in range(2)])>0:
+                continue
             for check in [v for v in vertices if v!=v1 and v!=v2 and v!=v3]:
                 if inside([v1,v2,v3],check):
-                    print(f"[{v1},{v2},{v3}],{check}")
                     noneInside = False
                     break
             if noneInside:
-                print(triangles)
+                unchanged = False
                 triangles.append([v1,v2,v3])
-                print(triangles)
                 vertices.pop(i)
                 break
-    triangles.append([vertices])
-    print(triangles)
+        if unchanged:
+            print('fuck')
+            break
+    triangles.append(vertices)
+
     return triangles
                 
                     
@@ -613,9 +628,28 @@ size = [15,7]
 n = 5
 quantity = 10
 ominos = generateOminos(5)
-edges  = generateEdge(list(ominos)[1])
-lines = list(edges)
-triangles = triangulate(lines)
-
-
-
+for i in range(50):
+    edges  = generateEdge(list(ominos)[i])
+    lines = list(edges)
+    print([edge[0] for edge in edges])
+    triangles = triangulate(lines)
+    
+    import numpy as np
+    import matplotlib
+    from matplotlib.patches import Polygon
+    from matplotlib.collections import PatchCollection
+    import matplotlib.pyplot as plt
+    patches = []
+    fig, ax = plt.subplots()
+    for triangle in triangles:
+        triangle = Polygon([triangle[0],triangle[1],triangle[2]], True)
+        patches.append(triangle)
+    colors = 100*np.random.rand(len(patches))
+    p = PatchCollection(patches, alpha=0.4)
+    p.set_array(np.array(colors))
+    ax.add_collection(p)
+    ax.autoscale()
+    fig.colorbar(p, ax=ax)
+    
+    plt.show()
+    
