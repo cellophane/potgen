@@ -1,4 +1,4 @@
-#reference : http://jwilson.coe.uga.edu/emt668/EMAT6680.F99/McCallum/WALLPA~1/SEVENT~1.HTM
+
 
 
 import numpy as np
@@ -40,7 +40,7 @@ def printOminos(ominos):
         printOmino(omino)
         print("next omino")
 def printOmino(omino):
-    minX = 0
+    minX = min([x[0] for x in omino])
     minY = min([y[1] for y in omino])
     maxX = max([x[0] for x in omino])
     maxY = max([y[1] for y in omino])
@@ -399,22 +399,27 @@ def countContiguousTube(grid,n):
                     
             
 import string
-#print an ascii representation of the tiling
-def printOminoSet(omino_set,size,n):
-    print("Printing omino set.")
+#turn an omino set into an array
+def ominoArray(omino_set,size,n):
     ominoList = list(generateOminos(n))
     grid = np.zeros(size,dtype = int)
     count = 0
-    characters = string.ascii_lowercase+string.ascii_uppercase
+    
     for ominoIndex,coord in omino_set:
         count+=1
         omino = ominoList[ominoIndex]
         for tile in omino:
             grid[tile[0]+coord[0]][tile[1]+coord[1]] = count
+    return grid
+
+#print an ascii representation of the tiling
+def printOminoSet(omino_set,size,n):
+    print("Printing omino set.")
+    grid = ominoArray(omino_set,size,n)
+    characters = string.ascii_lowercase+string.ascii_uppercase
     for x in range(size[0]):
         curString = ""
         for y in range(size[1]):
-            
             curString+=characters[grid[x][y]%len(characters)]
         print(curString)
 #print all the tilings in a set of solutions
@@ -503,11 +508,84 @@ def createMesh(size, n, omino_set):
     mesh = trimesh.Trimesh(vertices=vertices,faces=triangles)
     mesh.export("test.stl")
 
+def generateEdge(omino, coord = [0,0]):
+    edges = set([])
+    #start with a vertical edge
+    for tile in omino:
+        print(tile)
+        #look left
+        if not (tile[0]-1,tile[1]) in omino:
+            edges.add((tile,(tile[0],tile[1]+1)))
+        #look up
+        if not (tile[0],tile[1]+1) in omino:
+            edges.add(((tile[0],tile[1]+1),(tile[0]+1,tile[1]+1)))
+        #look right
+        if not (tile[0]+1,tile[1]) in omino:
+            edges.add(((tile[0]+1,tile[1]+1),(tile[0]+1,tile[1])))
+        #look down
+        if not (tile[0],tile[1]-1) in omino:
+            edges.add(((tile[0]+1,tile[1]),(tile[0],tile[1])))
+    collapsedEdges = []
+    edgeStarts = [edge[0] for edge in list(edges)]
+    edgeEnds = [edge[1] for edge in list(edges)]
+    foundEnds = [edgeStarts[0],edgeEnds[0]]
+    foundStarts = []
+    currentEdge = list(edges)[0]
+    while len(foundEnds)>0:
+        end = foundEnds.pop()
+        for i, start in enumerate(edgeStarts):
+            if start == end and not start in foundStarts:
+                checkEdge = list(edges)[i]
+                cXDiff = abs(currentEdge[0][0]-currentEdge[1][0])>0
+                cYDiff = abs(currentEdge[0][1]-currentEdge[1][1])>0
+                nXDiff = abs(checkEdge[0][0]-checkEdge[1][0])>0
+                nYDiff = abs(checkEdge[0][1]-checkEdge[1][1])>0
+                if cXDiff == nXDiff and cYDiff == nYDiff:
+                    currentEdge = (currentEdge[0],checkEdge[1])
+                    foundEnds.append(checkEdge[1])
+                    foundStarts.append(edgeStarts[i])
+                    break
+                else:
+                    collapsedEdges.append(currentEdge)
+                    currentEdge = checkEdge
+                    foundEnds.append(checkEdge[1])
+                    foundStarts.append(edgeStarts[i])
+                    break
+    currentEdge = (collapsedEdges[-1][1],collapsedEdges[0][0])
+    checkEdge = collapsedEdges[0]
+    cXDiff = abs(currentEdge[0][0]-currentEdge[1][0])>0
+    cYDiff = abs(currentEdge[0][1]-currentEdge[1][1])>0
+    nXDiff = abs(checkEdge[0][0]-checkEdge[1][0])>0
+    nYDiff = abs(checkEdge[0][1]-checkEdge[1][1])>0
+    if cXDiff == nXDiff and cYDiff == nYDiff:
+        collapsedEdges[0] = (collapsedEdges[-1][1],collapsedEdges[0][1])
+    else:
+        collapsedEdges.append(currentEdge)
+    return collapsedEdges
+    
+        
+            
+                        
+    
+            
 size = [15,7]
 n = 5
 quantity = 10
-omino_sets = tileRectangle(size,n,quantity)
-set_list = list(omino_sets)
-for i in range(0,len(set_list),max(int(len(set_list)/20),1)):
-   plotOminoSet(set_list[i],size,n)
-#printOminoSets(omino_sets,size,n)
+ominos = generateOminos(5)
+for ii in range(10):
+    edges  = generateEdge(list(ominos)[ii])
+    
+    
+    import numpy as np
+    import pylab as pl
+    from matplotlib import collections  as mc
+    
+    lines = list(edges)
+    
+    lc = mc.LineCollection(lines, linewidths=2)
+    fig, ax = pl.subplots()
+    ax.add_collection(lc)
+    ax.set_aspect('equal')
+    ax.margins(0.1)
+    fig.show()
+    printOmino(list(ominos)[ii])
