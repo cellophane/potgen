@@ -507,6 +507,7 @@ def createMesh(size, n, omino_set):
         vertices[i]=[vertex[0]*sideLength,vertex[1]*sideLength,vertex[2]]
     mesh = trimesh.Trimesh(vertices=vertices,faces=triangles)
     mesh.export("test.stl")
+
 #function to create a list of clockwise edges for an n-omino
 def generateEdge(omino, coord = [0,0]):
     edges = set([])
@@ -570,7 +571,12 @@ def generateEdge(omino, coord = [0,0]):
         vertices.append(edge[0])
     if vertices[0]==vertices[-1]:
         vertices.pop()
-    
+    print('wtf')
+    print(vertices)
+    print('not ok')
+    vertices = [(v[0]+coord[0],v[1]+coord[1]) for v in vertices]
+    print(vertices)
+    print('that was offset')
     return vertices
     
 #a function to return a triangulated polygon
@@ -597,7 +603,8 @@ def triangulate(vertices,offset=0):
             return True
         return False
     vertDict = {}
-    vertList = vertices.copy()
+    vertList = copy.deepcopy(vertices)
+    
     for i,v in enumerate(vertices):
         vertDict[tuple(v)]=i
     triangles = []
@@ -617,17 +624,17 @@ def triangulate(vertices,offset=0):
                     break
             if noneInside:
                 unchanged = False
-                triangles.append([vertDict[tuple(v1)],vertDict[tuple(v2)],vertDict[tuple(v3)]])
+                triangles.append([vertDict[tuple(v1)]+offset,vertDict[tuple(v2)]+offset,vertDict[tuple(v3)]+offset])
                 vertices.pop(i)
                 break
         if unchanged:
             print('fuck')
             break
-    triangles.append([vertDict[tuple(vertices[0])],vertDict[tuple(vertices[1])],vertDict[tuple(vertices[2])]])
+    triangles.append([vertDict[tuple(vertices[0])]+offset,vertDict[tuple(vertices[1])]+offset,vertDict[tuple(vertices[2])]+offset])
     print(triangles)
     return vertList,triangles
 #function to create the bevel from edges          
-def bevel(vertices,bevelWidth):
+def bevel(vertices,bevelWidth,offset = 0, bevelHeight=.2):
     bevelVertices = []
     for i in range(len(vertices)):
         v1 = vertices[(i-1)%len(vertices)]
@@ -657,42 +664,74 @@ def bevel(vertices,bevelWidth):
             yBev = bevelWidth
         print(f"{xBev},{yBev}")
         bevelVertices.append([v2[0]+xBev,v2[1]+yBev])
-    return bevelVertices
-size = [15,7]
-n = 5
-quantity = 10
-ominos = generateOminos(5)
-for i in range(50):
-    edges  = generateEdge(list(ominos)[i])
-    lines = list(edges)
-    lines1 = bevel(lines,.1)
-    vertList,triangles1 = triangulate(lines1)
-    print(vertList)
+    allVertices = []
+    for v in vertices:
+        v+=(0,)
+        allVertices.append(v)
+    for v in bevelVertices:
+        v+=(bevelHeight,)
+        allVertices.append(v)
     triangles = []
-    for t in triangles1:
-        triangles.append([vertList[i] for i in t])
-    import numpy as np
-    import matplotlib
-    from matplotlib.patches import Polygon
-    from matplotlib.collections import PatchCollection, LineCollection
-    import matplotlib.pyplot as plt
-    patches = []
-    fig, ax = plt.subplots()
-    segs = []
-    for i in range(len(lines)):
-        segs.append([edges[i],edges[(i+1)%len(edges)]])
-    line_segments = LineCollection(segs)
-    for triangle in triangles:
-        triangle = Polygon([triangle[0],triangle[1],triangle[2]], True)
-        patches.append(triangle)
-    colors = 100*np.random.rand(len(patches))
-    p = PatchCollection(patches, alpha=0.4)
-    p.set_array(np.array(colors))
-    ax.add_collection(line_segments)
-    ax.add_collection(p)
-    ax.autoscale()
-    ax.set_aspect('equal')
-    fig.colorbar(p, ax=ax)
-    
-    plt.show()
+    n = len(vertices)
+    for i in range(n):
+        triangles.append([i+offset,(i+1)%n+offset,(i+1)%n+n+offset])
+        triangles.append([i+offset,(i+1)%n+n+offset,i+offset+n])
+    return allVertices,triangles,bevelVertices
+
+def createMeshNew(size, n, omino_set):
+    ominos = generateOminos(n)
+    vertices = []
+    triangles = []
+    bevelWidth = .2
+    for ominoIndex, coord in omino_set:
+        omino = list(ominos)[ominoIndex]
+        newVertices = generateEdge(omino,coord)
+        newVertices,newTriangles,bevelVertices = bevel(newVertices,bevelWidth,offset = len(vertices), bevelHeight=.2)
+        vertices+=newVertices
+        triangles+=newTriangles
+        vertList,newTriangles = triangulate(bevelVertices,offset = len(vertices))
+        vertices+=vertList
+        triangles+=newTriangles
+    mesh = trimesh.Trimesh(vertices=vertices,faces=triangles)
+    mesh.export("test.stl")
+
+def testFunction():
+    size = [15,7]
+    n = 5
+    quantity = 10
+    ominos = generateOminos(5)
+    for i in range(50):
+        edges  = generateEdge(list(ominos)[i])
+        lines = list(edges)
+        allVertices,triangles,lines1 = bevel(lines,.1)
+        vertList,triangles1 = triangulate(lines1)
+        print(vertList)
+        triangles = []
+        for t in triangles1:
+            triangles.append([vertList[i] for i in t])
+        import numpy as np
+        import matplotlib
+        from matplotlib.patches import Polygon
+        from matplotlib.collections import PatchCollection, LineCollection
+        import matplotlib.pyplot as plt
+        patches = []
+        fig, ax = plt.subplots()
+        segs = []
+        for i in range(len(lines)):
+            segs.append([edges[i],edges[(i+1)%len(edges)]])
+        line_segments = LineCollection(segs)
+        for triangle in triangles:
+            triangle = Polygon([triangle[0],triangle[1],triangle[2]], True)
+            patches.append(triangle)
+        colors = 100*np.random.rand(len(patches))
+        p = PatchCollection(patches, alpha=0.4)
+        p.set_array(np.array(colors))
+        ax.add_collection(line_segments)
+        ax.add_collection(p)
+        ax.autoscale()
+        ax.set_aspect('equal')
+        fig.colorbar(p, ax=ax)
+        
+        plt.show()
+
     
