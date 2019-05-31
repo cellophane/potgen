@@ -565,10 +565,17 @@ def generateEdge(omino, coord = [0,0]):
         collapsedEdges[0] = (collapsedEdges[-1][1],collapsedEdges[0][1])
     else:
         collapsedEdges.append(currentEdge)
-    return collapsedEdges
+    vertices = []
+    for edge in collapsedEdges:
+        vertices.append(edge[0])
+    if vertices[0]==vertices[-1]:
+        vertices.pop()
+    
+    return vertices
     
 #a function to return a triangulated polygon
-def triangulate(edges):
+#returns vertList, triangles
+def triangulate(vertices,offset=0):
     def cross(v1,v2):
         return v1[0]*v2[1]-v1[1]*v2[0]
     def inside(triangle,point):
@@ -589,11 +596,10 @@ def triangulate(edges):
             
             return True
         return False
-    vertices = []
-    for edge in edges:
-        vertices.append(edge[0])
-    if vertices[0]==vertices[-1]:
-        vertices.pop()
+    vertDict = {}
+    vertList = vertices.copy()
+    for i,v in enumerate(vertices):
+        vertDict[tuple(v)]=i
     triangles = []
     unchanged = False
     while len(vertices)>3:
@@ -611,19 +617,47 @@ def triangulate(edges):
                     break
             if noneInside:
                 unchanged = False
-                triangles.append([v1,v2,v3])
+                triangles.append([vertDict[tuple(v1)],vertDict[tuple(v2)],vertDict[tuple(v3)]])
                 vertices.pop(i)
                 break
         if unchanged:
             print('fuck')
             break
-    triangles.append(vertices)
-
-    return triangles
-                
-                    
-    
-            
+    triangles.append([vertDict[tuple(vertices[0])],vertDict[tuple(vertices[1])],vertDict[tuple(vertices[2])]])
+    print(triangles)
+    return vertList,triangles
+#function to create the bevel from edges          
+def bevel(vertices,bevelWidth):
+    bevelVertices = []
+    for i in range(len(vertices)):
+        v1 = vertices[(i-1)%len(vertices)]
+        v2 = vertices[i]
+        v3 = vertices[(i+1)%len(vertices)]
+        print(f"{v1},{v2},{v3}")
+        a = [v2[0]-v1[0],v2[1]-v1[1]]
+        b = [v3[0]-v2[0],v3[1]-v2[1]]
+        print(f"{a},{b}")
+        xBev = bevelWidth
+        if a[0]>0 or b[0]<0:
+            xBev = -bevelWidth
+        yBev = bevelWidth
+        if a[1]>0 or b[1]<0:
+            yBev = -bevelWidth
+        if a[1]<0 and b[0]>0:
+            xBev = -bevelWidth
+            yBev = -bevelWidth
+        if a[1]>0 and b[0]<0:
+            xBev = bevelWidth
+            yBev = bevelWidth
+        if a[0]>0 and b[1]>0:
+            xBev = bevelWidth
+            yBev = -bevelWidth
+        if a[0]<0 and b[1]<0:
+            xBev = -bevelWidth
+            yBev = bevelWidth
+        print(f"{xBev},{yBev}")
+        bevelVertices.append([v2[0]+xBev,v2[1]+yBev])
+    return bevelVertices
 size = [15,7]
 n = 5
 quantity = 10
@@ -631,24 +665,33 @@ ominos = generateOminos(5)
 for i in range(50):
     edges  = generateEdge(list(ominos)[i])
     lines = list(edges)
-    print([edge[0] for edge in edges])
-    triangles = triangulate(lines)
-    
+    lines1 = bevel(lines,.1)
+    vertList,triangles1 = triangulate(lines1)
+    print(vertList)
+    triangles = []
+    for t in triangles1:
+        triangles.append([vertList[i] for i in t])
     import numpy as np
     import matplotlib
     from matplotlib.patches import Polygon
-    from matplotlib.collections import PatchCollection
+    from matplotlib.collections import PatchCollection, LineCollection
     import matplotlib.pyplot as plt
     patches = []
     fig, ax = plt.subplots()
+    segs = []
+    for i in range(len(lines)):
+        segs.append([edges[i],edges[(i+1)%len(edges)]])
+    line_segments = LineCollection(segs)
     for triangle in triangles:
         triangle = Polygon([triangle[0],triangle[1],triangle[2]], True)
         patches.append(triangle)
     colors = 100*np.random.rand(len(patches))
     p = PatchCollection(patches, alpha=0.4)
     p.set_array(np.array(colors))
+    ax.add_collection(line_segments)
     ax.add_collection(p)
     ax.autoscale()
+    ax.set_aspect('equal')
     fig.colorbar(p, ax=ax)
     
     plt.show()
